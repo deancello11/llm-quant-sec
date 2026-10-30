@@ -1,0 +1,11 @@
+# raw harmful completions and anything containing them: never publish
+outputs/
+judgments/pilot/
+validation/labeling_sheet*.csv
+# big or downloaded
+quantized/
+data/cache/
+__pycache__/
+.venv*/
+*.pyc
+.pytest_cache/

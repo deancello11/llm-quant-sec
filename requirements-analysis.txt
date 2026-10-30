@@ -1,0 +1,8 @@
+# Enough to run src.analyze and the tests on a laptop (no GPU).
+pyyaml
+packaging
+numpy
+pandas
+scipy
+matplotlib
+pytest

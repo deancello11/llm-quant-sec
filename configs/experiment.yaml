@@ -1,0 +1,115 @@
+# The whole experiment lives here. Edit this file, not the code.
+
+seed: 1234
+
+generation:
+  max_new_tokens: 512      # fixed for every condition. Truncation is recorded per response.
+  batch_size: 16           # halves automatically on CUDA OOM. Batch composition is identical across precisions.
+  do_sample: false         # greedy decoding
+  system_prompt: null      # none: we use each model's official chat template as-is
+
+models:
+  llama31-8b:
+    hf_id: meta-llama/Llama-3.1-8B-Instruct
+    family: llama
+    gated: true
+  qwen25-7b:
+    hf_id: Qwen/Qwen2.5-7B-Instruct
+    family: qwen
+    gated: false
+  mistral-7b-v03:
+    hf_id: mistralai/Mistral-7B-Instruct-v0.3
+    family: mistral
+    gated: true
+  # gemma2-9b:               # optional 4th model. Uncomment only if the first three finish on schedule.
+  #   hf_id: google/gemma-2-9b-it
+  #   family: gemma
+  #   gated: true
+
+precisions:
+  fp16: {method: none,        bits: 16}
+  int8: {method: bnb-int8,    bits: 8}    # bitsandbytes LLM.int8(), quantized at load time
+  nf4:  {method: bnb-nf4,     bits: 4}    # bitsandbytes NF4, fp16 compute, no double quant, no calibration
+  gptq4: {method: gptq,       bits: 4, group_size: 128}   # built by src/quantize.py
+  awq4:  {method: awq,        bits: 4, group_size: 128}   # built by src/quantize.py
+
+# By default GPTQ/AWQ checkpoints are built by us with one fixed calibration set.
+# To use a community checkpoint instead, add "<model_key>/<precision>": "<hf repo>" here.
+# Records from such a cell are flagged community=true, and the report must say the cell is less controlled.
+community_checkpoints: {}
+
+calibration:
+  source: allenai/c4                     # generic web text, not safety data
+  data_file: en/c4-train.00001-of-01024.json.gz
+  n_samples: 512
+  min_chars: 500
+  max_tokens: 512
+  seed: 1234
+
+# Pin "ref" to a commit SHA on day one (the loader warns while it is "main").
+datasets:
+  harmbench:
+    kind: url_csv
+    url: "https://raw.githubusercontent.com/centerforaisafety/HarmBench/{ref}/data/behavior_datasets/harmbench_behaviors_text_all.csv"
+    ref: 8e1604d1171fe8a48d8febecd22f600e462bdcdd
+    filter: {FunctionalCategory: standard}   # text-only behaviors with no context string. Excludes contextual and copyright.
+    id_col: BehaviorID
+    text_col: Behavior
+    category_col: SemanticCategory
+    harmful: true
+    variants: [direct, templates]
+  jbb_harmful:
+    kind: hf_dataset
+    repo: JailbreakBench/JBB-Behaviors
+    config: behaviors
+    split: harmful
+    text_col: Goal
+    category_col: Category
+    revision: 886acc352a31533ffbcf4ef22c744658688086fc
+    harmful: true
+    variants: [direct, templates]
+  jbb_benign:
+    kind: hf_dataset
+    repo: JailbreakBench/JBB-Behaviors
+    config: behaviors
+    split: benign
+    text_col: Goal
+    category_col: Category
+    revision: 886acc352a31533ffbcf4ef22c744658688086fc
+    harmful: false
+    variants: [direct]
+  xstest:
+    kind: url_csv
+    url: "https://raw.githubusercontent.com/paul-rottger/xstest/{ref}/xstest_prompts.csv"
+    ref: d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d
+    filter: {label: safe}                    # the 250 safe prompts. The contrast_* unsafe prompts are not used.
+    id_col: id
+    text_col: prompt
+    category_col: type
+    harmful: false
+    variants: [direct]
+
+templates_file: configs/jailbreak_templates.yaml
+
+pilot:
+  n_prompts_per_dataset: 5     # 4 datasets x 5 = 20 prompts per cell
+
+judge:
+  model: meta-llama/Llama-Guard-3-8B
+  dtype: bfloat16              # one fixed configuration for every condition
+  batch_size: 16
+  max_new_tokens: 20
+
+perf:
+  input_len: 128
+  output_len: 256
+  concurrency: [1, 32]
+  repeats: 6
+  min_seconds: 10              # each timed window lasts at least this long so the energy counter is steady
+  warmup_runs: 1
+  idle_seconds: 20
+
+stats:
+  n_boot: 10000
+  alpha: 0.05
+  hypothesis_margin_pts: 3.0

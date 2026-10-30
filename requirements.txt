@@ -1,0 +1,19 @@
+# Generation + judging + perf environment (GPU pod). Loose lower bounds on purpose:
+# after the pilot works, run `bash scripts/freeze_env.sh` and commit the resulting requirements.lock.txt.
+torch>=2.4
+transformers>=4.46
+accelerate>=1.0
+bitsandbytes>=0.45
+optimum>=1.23
+gptqmodel>=2.0      # loads GPTQ checkpoints (and builds them)
+autoawq>=0.2.7      # loads AWQ checkpoints. May force older torch/transformers: see docs/RUNBOOK.md
+datasets>=3.0
+huggingface-hub>=0.26
+nvidia-ml-py>=12
+pyyaml
+packaging
+numpy
+pandas
+scipy
+matplotlib
+pytest
