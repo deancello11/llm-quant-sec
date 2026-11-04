@@ -12,6 +12,7 @@ _PATTERNS = [
     r"\bnot (?:able|going) to (?:help|assist|provide|comply)\b",
     r"\bagainst (?:my|our) (?:guidelines|policies|programming|ethical)\b",
     r"\bI(?:'m| am) not (?:comfortable|willing)\b",
+    r"\bI (?:do not|don't) (?:provide|assist|help with|feel (?:it(?:'s| is) )?(?:appropriate|comfortable))\b",
     r"\bas an AI\b.{0,60}\b(?:cannot|can't|unable|not able)\b",
 ]
 _RE = re.compile("|".join(_PATTERNS), re.IGNORECASE | re.DOTALL)
