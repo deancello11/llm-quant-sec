@@ -17,9 +17,8 @@ This project adds the question that benchmark could not answer: what happens to 
 
 ## Hypotheses (written before running anything)
 
-> **DRAFT. Edit these to say what you actually believe, then `git commit` them before the first generation run.
-> The commit timestamp is your proof they came first.** `src/analyze.py` writes `results/hypotheses.md` with these
-> exact verdict rules, so if you change a rule, change it in `hypotheses_report()` in the same commit.
+These hypotheses were frozen in git before any generation run; the commit that finalizes them predates `outputs/_runs.jsonl`.
+`src/analyze.py` writes `results/hypotheses.md` with the exact verdict rules in `hypotheses_report()`.
 
 All differences are in percentage points of ASR, averaged over the models, relative to FP16 on the same prompts.
 
