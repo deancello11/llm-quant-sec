@@ -141,7 +141,9 @@ def main():
             meta = {"model": m, "precision": p, "seed": cfg["seed"], "run_id": run_id}
             for d in datasets:
                 run_cell(prompts[d], out_dir / cell_name(m, p, d), meta, fmt, gen, bs, tlen)
-            free(model)
+            # drop every reference (the closures hold the model too), or the next load runs out of GPU memory
+            del model, tok, fmt, tlen, gen
+            free(None)
 
 
 if __name__ == "__main__":

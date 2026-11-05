@@ -78,7 +78,8 @@ def main():
                         **res, "gpu": gpu_info, "timestamp": now_iso(), "env": env_info() if r == 0 else None})
                     print(f"  c={c} r={r}: {tokens / res['duration_s']:.0f} tok/s, {1000 * res['energy_j'] / tokens:.0f} mJ/tok"
                           f"{'  THROTTLED' if res['thermal_throttled'] else ''}", flush=True)
-            free(model)
+            del model, tok
+            free(None)
     mon.stop()
 
 
