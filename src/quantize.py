@@ -20,6 +20,15 @@ from .load_model import checkpoint_dir_name
 
 METHOD_TO_PRECISION = {"gptq": "gptq4", "awq": "awq4"}
 
+# The quantization libraries download the whole repo when given a model name, including duplicate weight files
+# (Llama's original/consolidated.00.pth, Mistral's consolidated.safetensors, 14-16 GB each). Fetch only what loading needs.
+_NEEDED = ["*.json", "*.model", "*.model.v3", "*.txt", "*.jinja", "model-*.safetensors", "model.safetensors"]
+
+
+def local_snapshot(hf_id: str) -> str:
+    from huggingface_hub import snapshot_download
+    return snapshot_download(hf_id, allow_patterns=_NEEDED)
+
 
 def load_calibration_texts(cfg: dict) -> list[str]:
     """The same n_samples generic web-text documents for every model and method (seeded)."""
@@ -89,10 +98,11 @@ def main():
             p = cfg["precisions"][prec]
             print(f"[{m} / {prec}] quantizing with {len(texts)} calibration samples")
             out.parent.mkdir(parents=True, exist_ok=True)
+            src = local_snapshot(base)
             if method == "gptq":
-                quantize_gptq(base, str(out), texts, p["bits"], p["group_size"])
+                quantize_gptq(src, str(out), texts, p["bits"], p["group_size"])
             else:
-                quantize_awq(base, str(out), texts, p["bits"], p["group_size"])
+                quantize_awq(src, str(out), texts, p["bits"], p["group_size"])
             (out / "calibration_manifest.json").write_text(json.dumps(
                 {**manifest, "method": method, "base_model": base, "built": now_iso()}, indent=2))
 
