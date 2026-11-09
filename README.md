@@ -44,7 +44,7 @@ I built the GPTQ and AWQ versions myself, all from the same 512 ordinary web-tex
 
 ## My hypotheses (written down before any run)
 
-I committed these to git before generating anything ([commit `e693030`](https://github.com/deancello11/llm-quant-sec/commit/e693030)). Here is how each one turned out.
+I committed these to git before generating anything. Here is how each one turned out.
 
 | | What I predicted | Verdict | What happened |
 |---|---|---|---|
