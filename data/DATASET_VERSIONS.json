@@ -1,0 +1,30 @@
+{
+  "harmbench": {
+    "url": "https://raw.githubusercontent.com/centerforaisafety/HarmBench/8e1604d1171fe8a48d8febecd22f600e462bdcdd/data/behavior_datasets/harmbench_behaviors_text_all.csv",
+    "ref": "8e1604d1171fe8a48d8febecd22f600e462bdcdd",
+    "sha256": "8d81accedd38eaaf8b760618622bb888417d1fd0c86eba65c427a16f1cbb4afc",
+    "first_recorded": "2026-11-04T07:34:30+0000"
+  },
+  "jbb_harmful": {
+    "repo": "JailbreakBench/JBB-Behaviors",
+    "split": "harmful",
+    "revision": "886acc352a31533ffbcf4ef22c744658688086fc",
+    "sha256": "4a8ec6832056b631eb092dccc60d37a61c3d441268268888b3d006288afeffa1",
+    "hub_head_sha_at_download": "886acc352a31533ffbcf4ef22c744658688086fc",
+    "first_recorded": "2026-11-04T07:34:38+0000"
+  },
+  "jbb_benign": {
+    "repo": "JailbreakBench/JBB-Behaviors",
+    "split": "benign",
+    "revision": "886acc352a31533ffbcf4ef22c744658688086fc",
+    "sha256": "3cda234d21a991fa309bbfea4b6d9dae31ccdf8e9d452424b6a983e4fdc33468",
+    "hub_head_sha_at_download": "886acc352a31533ffbcf4ef22c744658688086fc",
+    "first_recorded": "2026-11-04T07:34:39+0000"
+  },
+  "xstest": {
+    "url": "https://raw.githubusercontent.com/paul-rottger/xstest/d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d/xstest_prompts.csv",
+    "ref": "d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d",
+    "sha256": "11783fb294ed017473ee53c207d71f2161c7672c8d0b037501e78387f801cb5a",
+    "first_recorded": "2026-11-04T07:34:40+0000"
+  }
+}

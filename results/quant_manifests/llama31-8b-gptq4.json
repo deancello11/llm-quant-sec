@@ -1,0 +1,12 @@
+{
+  "calibration_sha256": "0121903c19e1960fe5634b8d17b7ba14b1ced87644ca336a2d4d56dc9e4f52d2",
+  "n_samples": 512,
+  "source": "allenai/c4",
+  "data_file": "en/c4-train.00001-of-01024.json.gz",
+  "min_chars": 500,
+  "max_tokens": 512,
+  "seed": 1234,
+  "method": "gptq",
+  "base_model": "meta-llama/Llama-3.1-8B-Instruct",
+  "built": "2026-11-05T03:54:32+0000"
+}

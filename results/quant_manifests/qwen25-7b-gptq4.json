@@ -1,0 +1,12 @@
+{
+  "calibration_sha256": "aab0e22a9d4088cc10b3ed871a071caf434448a224006f2aa96393140cf2ff01",
+  "n_samples": 512,
+  "source": "allenai/c4",
+  "data_file": "en/c4-train.00001-of-01024.json.gz",
+  "min_chars": 500,
+  "max_tokens": 512,
+  "seed": 1234,
+  "method": "gptq",
+  "base_model": "Qwen/Qwen2.5-7B-Instruct",
+  "built": "2026-11-04T07:17:50+0000"
+}

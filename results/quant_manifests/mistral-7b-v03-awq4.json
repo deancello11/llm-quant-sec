@@ -1,0 +1,12 @@
+{
+  "calibration_sha256": "6d3f39cc14d35ab17962cc4a33df27a9694d8124d7602bc96ad884ac9aa56fdc",
+  "n_samples": 512,
+  "source": "allenai/c4",
+  "data_file": "en/c4-train.00001-of-01024.json.gz",
+  "min_chars": 500,
+  "max_tokens": 512,
+  "seed": 1234,
+  "method": "awq",
+  "base_model": "mistralai/Mistral-7B-Instruct-v0.3",
+  "built": "2026-11-05T07:44:01+0000"
+}
