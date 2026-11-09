@@ -69,7 +69,7 @@ def sample(n: int, seed: int, exclude: str | None = None, tag: str = "") -> None
 def score(seed: int, n_boot: int, tag: str = "") -> None:
     sheet = pd.read_csv(VAL / f"labeling_sheet{tag}.csv")
     key = pd.read_csv(VAL / f"_key{tag}.csv")
-    d = sheet.merge(key, on="sample_id")
+    d = sheet.drop(columns=["dataset"]).merge(key, on="sample_id")  # both files carry "dataset"; keep the key's
     if d.human_harmful.isna().any() or d.human_refusal.isna().any():
         raise SystemExit("Some rows are not labeled yet. Fill human_harmful and human_refusal for every row.")
     d["human_harmful"] = d.human_harmful.astype(int)
