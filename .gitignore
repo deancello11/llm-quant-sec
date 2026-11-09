@@ -9,3 +9,5 @@ __pycache__/
 .venv*/
 *.pyc
 .pytest_cache/
+# run logs (tracebacks, local paths): keep local
+logs/

@@ -249,5 +249,4 @@ results/                         tables, charts and the benchmark data
 validation/                      hand labels and agreement scores (the labeling sheets with text are not included)
 tests/                           tests that need no GPU
 REPORT.md                        the full write-up
-docs/                            my working notes from the run
 ```

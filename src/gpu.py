@@ -1,5 +1,12 @@
 """Reads the GPU's energy, power, clock speed, temperature and memory using NVML.
 
+NVML is the library NVIDIA ships for asking a graphics card about itself, the same source that
+nvidia-smi uses. This file wraps it so the speed/energy benchmark (src/bench_perf.py) can say
+"start the stopwatch" and "stop the stopwatch" and get back joules, watts and a health report.
+
+Think of the energy counter like the electricity meter on a house: you read it before and after,
+and the difference is what was used. Power readings are like glancing at the live watt display.
+
 Energy is measured two ways for every timed run:
   1. NVML's built-in energy counter (in millijoules). We read it right before and right
      after the run. This is the main number.
@@ -15,6 +22,8 @@ import time
 
 import pynvml
 
+# Why trapezoids: power changes between readings, so we average each pair of neighbours and multiply by the
+# time between them. That is the area under the power curve, which is energy (watts x seconds = joules).
 def trapezoid_energy_j(times_s, powers_w):
     """Energy in joules from power readings (W) at known times (s), one trapezoid per pair."""
     return sum(0.5 * (powers_w[i] + powers_w[i - 1]) * (times_s[i] - times_s[i - 1]) for i in range(1, len(times_s)))
@@ -34,6 +43,8 @@ def _s(x):
 
 
 class GpuMonitor:
+    """Watches one GPU. Call start(), then begin_window()/end_window() around each thing you want to measure."""
+
     def __init__(self, index: int = 0, interval_s: float = 0.1):
         pynvml.nvmlInit()
         self.index = index
@@ -41,6 +52,7 @@ class GpuMonitor:
         self.name = _s(pynvml.nvmlDeviceGetName(self.h))
         self.interval = interval_s
         self._samples: list[tuple] = []  # (time, power_w, sm_mhz, temp_c, mem_used_mib, throttle_bits)
+        # The lock matters because the background thread and the main thread both touch the sample list.
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -56,11 +68,13 @@ class GpuMonitor:
             return False
 
     def energy_mj(self) -> int | None:
+        """Total energy the GPU board has used since the driver loaded, in millijoules (None if no counter)."""
         if not self.has_energy_counter:
             return None
         return pynvml.nvmlDeviceGetTotalEnergyConsumption(self.h)
 
     def _throttle(self) -> int:
+        """Return NVML's throttle bits: the reasons, if any, the GPU is currently running slower than it could."""
         # The function was renamed in newer NVML versions, so try both names.
         for fn in ("nvmlDeviceGetCurrentClocksEventReasons", "nvmlDeviceGetCurrentClocksThrottleReasons"):
             f = getattr(pynvml, fn, None)
@@ -72,6 +86,8 @@ class GpuMonitor:
         return 0
 
     def _read(self) -> tuple:
+        """Take one snapshot of power, clock, temperature, memory and throttle bits, stamped with the time."""
+        # Some cards cannot report every reading. A missing one becomes 0 instead of crashing a long benchmark.
         def safe(fn, default=0.0):
             try:
                 return fn()
@@ -85,6 +101,7 @@ class GpuMonitor:
         return (time.perf_counter(), power, sm, temp, mem, self._throttle())
 
     def _append_sample(self) -> int:
+        """Record one snapshot and return its position in the list, so a window can remember where it began."""
         s = self._read()
         with self._lock:
             self._samples.append(s)
@@ -106,17 +123,20 @@ class GpuMonitor:
         self._thread.start()
 
     def stop(self):
+        """Stop the background sampling thread and wait for it to finish."""
         if self._thread:
             self._stop.set()
             self._thread.join()
             self._thread = None
 
     def mem_used_mib(self) -> float:
+        """GPU memory in use right now, in MiB."""
         return pynvml.nvmlDeviceGetMemoryInfo(self.h).used / 2**20
 
     # ---- timed windows -----------------------------------------------------------
     def begin_window(self) -> dict:
         """Mark the start of a timed run. Pass the result to end_window()."""
+        # Read the energy meter first and the clock right after, so the two stay as close together as possible.
         e0 = self.energy_mj()
         t0 = time.perf_counter()
         i0 = self._append_sample()
@@ -132,8 +152,10 @@ class GpuMonitor:
         ts = [s[0] for s in samples]
         pw = [s[1] for s in samples]
         dur = t1 - w["t0"]
+        # Two energy answers: the integrated one is a sanity check on the counter (they should roughly agree).
         e_int = trapezoid_energy_j(ts, pw)
         e_cnt = (e1 - w["e0"]) / 1000.0 if (e1 is not None and w["e0"] is not None) else None
+        # OR the bits together so a throttle event at any moment during the window is remembered.
         throttle = 0
         for s in samples:
             throttle |= s[5]
@@ -150,6 +172,7 @@ class GpuMonitor:
             "temp_max_c": max(s[3] for s in samples),
             "mem_used_peak_mib": max(s[4] for s in samples),
             "throttle_mask": throttle,
+            # Only the bad kinds of slowdown (heat, hardware brake) count. Plain power-limit throttling is normal.
             "thermal_throttled": bool(throttle & BAD_THROTTLE_MASK),
             "n_power_samples": len(samples),
         }
@@ -163,6 +186,7 @@ class GpuMonitor:
 
     # ---- GPU details for the log -------------------------------------------------
     def info(self) -> dict:
+        """Static facts about the GPU (name, driver, memory, power limit), saved with the results for the record."""
         d = {"gpu_name": self.name, "energy_counter": self.has_energy_counter}
         try:
             d["driver"] = _s(pynvml.nvmlSystemGetDriverVersion())

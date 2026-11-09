@@ -1,6 +1,11 @@
 """Builds the prompt list for each dataset. Raw datasets are downloaded to data/cache (gitignored), never redistributed.
 
 Every download is fingerprinted in data/DATASET_VERSIONS.json so the exact data used is on record.
+
+Where this fits: the pipeline is quantize -> generate -> judge -> analyze. This file feeds the "generate" step.
+It fetches the public benchmark datasets (harmful requests and harmless-but-scary-sounding ones), pins them to
+exact versions, and turns each request into several prompts: the plain request, plus copies wrapped in the
+fixed jailbreak templates. Every model and precision gets this exact same list, in the same form.
 """
 from __future__ import annotations
 
@@ -21,6 +26,7 @@ VERSIONS = DATA_DIR / "DATASET_VERSIONS.json"
 
 @dataclass
 class PromptRow:
+    """One prompt to send to a model, plus the labels we need to analyze its answer later."""
     prompt_id: str
     dataset: str
     behavior_id: str     # the cluster for bootstrapping: the same behavior across direct and template variants
@@ -30,10 +36,12 @@ class PromptRow:
     harmful: bool
 
     def to_dict(self):
+        """The row as a plain dict (handy for writing to JSON)."""
         return asdict(self)
 
 
 def _record_version(name: str, info: dict) -> None:
+    """Write a dataset's fingerprint to DATASET_VERSIONS.json, and warn loudly if it changed since last time."""
     data = json.loads(VERSIONS.read_text()) if VERSIONS.exists() else {}
     old = data.get(name)
     if old and old.get("sha256") and old["sha256"] != info.get("sha256"):
@@ -44,8 +52,10 @@ def _record_version(name: str, info: dict) -> None:
 
 
 def _load_url_csv(name: str, spec: dict) -> pd.DataFrame:
+    """Download a CSV dataset once (cached after that) and record its SHA-256 fingerprint."""
     CACHE.mkdir(parents=True, exist_ok=True)
     path = CACHE / f"{name}.csv"
+    # The ref is a git commit, so the link always points at the same file even if the repo changes later.
     url = spec["url"].format(ref=spec["ref"])
     if not path.exists():
         if spec["ref"] == "main":
@@ -57,6 +67,7 @@ def _load_url_csv(name: str, spec: dict) -> pd.DataFrame:
 
 
 def _load_hf(name: str, spec: dict) -> pd.DataFrame:
+    """Same idea as _load_url_csv, but for datasets hosted on the Hugging Face Hub (pinned by revision)."""
     CACHE.mkdir(parents=True, exist_ok=True)
     path = CACHE / f"{name}.csv"
     if not path.exists():
@@ -65,6 +76,7 @@ def _load_hf(name: str, spec: dict) -> pd.DataFrame:
         ds.to_pandas().to_csv(path, index=False)
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
     info = {"repo": spec["repo"], "split": spec["split"], "revision": spec.get("revision"), "sha256": sha}
+    # Nice-to-have extra record. If we are offline or the lookup fails, that is fine, so errors are ignored.
     try:
         from huggingface_hub import dataset_info
         info["hub_head_sha_at_download"] = dataset_info(spec["repo"]).sha
@@ -75,6 +87,7 @@ def _load_hf(name: str, spec: dict) -> pd.DataFrame:
 
 
 def load_templates(cfg: dict) -> dict[str, str]:
+    """Read the four fixed jailbreak templates (name -> text with a {behavior} slot) from the templates file."""
     with open(ROOT / cfg["templates_file"], encoding="utf-8") as f:
         return yaml.safe_load(f)["templates"]
 
@@ -89,6 +102,8 @@ def build_prompts(cfg: dict, dataset: str, pilot: bool = False) -> list[PromptRo
 
     templates = load_templates(cfg) if "templates" in spec["variants"] else {}
     rows: list[PromptRow] = []
+    # Every variant of a request shares one behavior_id. Later, the stats treat them as one family, because
+    # five versions of the same request are not five independent tests.
     for i, r in df.iterrows():
         bid = str(r[spec["id_col"]]) if "id_col" in spec else f"{i:04d}"
         text = str(r[spec["text_col"]]).strip()
@@ -101,6 +116,7 @@ def build_prompts(cfg: dict, dataset: str, pilot: bool = False) -> list[PromptRo
 
     if pilot:
         # Pilot: a seeded random sample of whole prompts. Same sample for every model and precision.
+        # (The seed is what makes "random" repeatable: the same shuffle every time.)
         n = cfg["pilot"]["n_prompts_per_dataset"]
         rng = random.Random(cfg["seed"])
         rows = rng.sample(rows, min(n, len(rows)))

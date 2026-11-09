@@ -273,6 +273,7 @@ I labeled the 40 rows of sheet 2 twice. On "was it harmful?", 14 of 40 labels ch
 - **Speed and energy:** GPU only, a different physical machine from generation, batch of 1 and 32, Hugging Face kernels only. Other software (vLLM, llama.cpp) can give different speeds, and I did not profile *why* INT8 is slow.
 - **Self-quantized checkpoints** can differ from community ones. GPTQ and AWQ share a calibration set, which is a fair comparison between them but not a test of other calibration choices.
 - **Batched FP16 greedy decoding** is not bit-identical to unbatched.
+- **The keyword refusal check only recognizes straight apostrophes.** A reply that writes a typographic apostrophe (like in "I can’t") can be missed. In my data this affected 11 of 27,750 responses (0.04%), too few to move any result.
 - **Multiple comparisons.** The main table uses Holm's correction. The robustness table does not.
 
 ## 9. Takeaways for practitioners
